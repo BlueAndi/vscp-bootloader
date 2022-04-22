@@ -312,7 +312,7 @@ static void vscp_bootloader_sendNewNodeOnlineEvent(void)
     txMsg.priority  = VSCP_PRIORITY_0_HIGH;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 1;    /* 1 byte data */
+    txMsg.dataSize  = 1;    /* 1 byte data */
     txMsg.data[0]   = vscp_bootloader_nickname;
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
@@ -333,7 +333,7 @@ static void vscp_bootloader_sendAckEnterBootLoader(uint32_t blockSize, uint32_t 
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 8;                        /* 8 byte data */
+    txMsg.dataSize  = 8;                        /* 8 byte data */
     txMsg.data[0]   = (blockSize >> 24) & 0xff; /* MSB of program memory block size. */
     txMsg.data[1]   = (blockSize >> 16) & 0xff; /* Program memory block size. */
     txMsg.data[2]   = (blockSize >>  8) & 0xff; /* Program memory block size. */
@@ -362,7 +362,7 @@ static void vscp_bootloader_sendNakEnterBootLoader(uint8_t errorCode)
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 1;            /* 1 byte data */
+    txMsg.dataSize  = 1;            /* 1 byte data */
     txMsg.data[0]   = errorCode;    /* User defined error code */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
@@ -434,8 +434,8 @@ static void vscp_bootloader_handleProtocolStartBlockDataTransfer(vscp_RxMessage 
         return;
     }
 
-    if ((4 > rxMsg->dataNum) ||
-        (6 < rxMsg->dataNum))
+    if ((4 > rxMsg->dataSize) ||
+        (6 < rxMsg->dataSize))
     {
         vscp_bootloader_sendNakStartBlockDataTransfer();
     }
@@ -450,7 +450,7 @@ static void vscp_bootloader_handleProtocolStartBlockDataTransfer(vscp_RxMessage 
                                                               rxMsg->data[3]);
 
         /* Determine memory type which to program */
-        if (4 < rxMsg->dataNum)
+        if (4 < rxMsg->dataSize)
         {
             memoryType = rxMsg->data[4];
         }
@@ -498,13 +498,13 @@ static void vscp_bootloader_handleProtocolBlockData(vscp_RxMessage const * const
     }
 
     /* Every block data must be a multiple of 8. */
-    if (VSCP_L1_DATA_SIZE != rxMsg->dataNum)
+    if (VSCP_L1_DATA_SIZE != rxMsg->dataSize)
     {
         vscp_bootloader_sendNakBlockData(VSCP_BOOTLOADER_ERROR_INVALID_MESSAGE,
                                          progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
     }
     /* Block buffer already full? */
-    else if (VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE < (progParam->blockBufferIndex + rxMsg->dataNum))
+    else if (VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE < (progParam->blockBufferIndex + rxMsg->dataSize))
     {
         vscp_bootloader_sendNakBlockData(VSCP_BOOTLOADER_ERROR_INVALID_MESSAGE,
                                          progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
@@ -513,7 +513,7 @@ static void vscp_bootloader_handleProtocolBlockData(vscp_RxMessage const * const
     {
         uint8_t index   = 0;
 
-        for(index = 0; index < rxMsg->dataNum; ++index)
+        for(index = 0; index < rxMsg->dataSize; ++index)
         {
             progParam->blockBuffer[progParam->blockBufferIndex] = rxMsg->data[index];
 
@@ -547,7 +547,7 @@ static void vscp_bootloader_handleProtocolProgramDataBlock(vscp_RxMessage const 
         return;
     }
 
-    if (4 != rxMsg->dataNum)
+    if (4 != rxMsg->dataSize)
     {
         vscp_bootloader_sendNakProgramBlockData(VSCP_BOOTLOADER_ERROR_INVALID_MESSAGE, progParam->blockNumber);
     }
@@ -602,8 +602,8 @@ static BOOL vscp_bootloader_handleProtocolDropNicknameId(vscp_RxMessage const * 
     }
 
     /* Abort bootloader? */
-    if ((0 < rxMsg->dataNum) &&
-        (4 > rxMsg->dataNum) &&
+    if ((0 < rxMsg->dataSize) &&
+        (4 > rxMsg->dataSize) &&
         (vscp_bootloader_nickname == rxMsg->data[0]))
     {
         reboot = TRUE;
@@ -624,7 +624,7 @@ static void vscp_bootloader_sendAckStartBlockDataTransfer(void)
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 0;    /* 0 byte data */
+    txMsg.dataSize  = 0;    /* 0 byte data */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
 
@@ -643,7 +643,7 @@ static void vscp_bootloader_sendNakStartBlockDataTransfer(void)
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 0;    /* 0 byte data */
+    txMsg.dataSize  = 0;    /* 0 byte data */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
 
@@ -665,7 +665,7 @@ static void vscp_bootloader_sendAckBlockData(uint16_t crc, uint32_t writePtr)
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 6;    /* 6 byte data */
+    txMsg.dataSize  = 6;    /* 6 byte data */
     txMsg.data[0]   = (uint8_t)((crc >> 8u) & 0xFFu);
     txMsg.data[1]   = (uint8_t)((crc >> 0u) & 0xFFu);
     txMsg.data[2]   = (uint8_t)((writePtr >> 24u) & 0xFFu);
@@ -693,7 +693,7 @@ static void vscp_bootloader_sendNakBlockData(uint8_t errorCode, uint32_t writePt
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 5;    /* 5 byte data */
+    txMsg.dataSize  = 5;    /* 5 byte data */
     txMsg.data[0]   = errorCode;
     txMsg.data[1]   = (uint8_t)((writePtr >> 24u) & 0xFFu);
     txMsg.data[2]   = (uint8_t)((writePtr >> 16u) & 0xFFu);
@@ -719,7 +719,7 @@ static void vscp_bootloader_sendAckProgramBlockData(uint32_t blockNumber)
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 4;    /* 4 byte data */
+    txMsg.dataSize  = 4;    /* 4 byte data */
     txMsg.data[0]   = (uint8_t)((blockNumber >> 24u) & 0xFFu);
     txMsg.data[1]   = (uint8_t)((blockNumber >> 16u) & 0xFFu);
     txMsg.data[2]   = (uint8_t)((blockNumber >>  8u) & 0xFFu);
@@ -745,7 +745,7 @@ static void vscp_bootloader_sendNakProgramBlockData(uint8_t errorCode, uint32_t 
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 5;    /* 5 byte data */
+    txMsg.dataSize  = 5;    /* 5 byte data */
     txMsg.data[0]   = errorCode;
     txMsg.data[1]   = (uint8_t)((blockNumber >> 24u) & 0xFFu);
     txMsg.data[2]   = (uint8_t)((blockNumber >> 16u) & 0xFFu);
@@ -769,7 +769,7 @@ static void vscp_bootloader_sendAckActivateNewImage(void)
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 0;    /* 0 byte data */
+    txMsg.dataSize  = 0;    /* 0 byte data */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
 
@@ -788,7 +788,7 @@ static void vscp_bootloader_sendNakActivateNewImage(void)
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
-    txMsg.dataNum   = 0;    /* 0 byte data */
+    txMsg.dataSize  = 0;    /* 0 byte data */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
 
@@ -815,7 +815,7 @@ static BOOL vscp_bootloader_handleProtocolActivateNewImage(vscp_RxMessage const 
         return success;
     }
 
-    if (2 != rxMsg->dataNum)
+    if (2 != rxMsg->dataSize)
     {
         vscp_bootloader_sendNakActivateNewImage();
     }
