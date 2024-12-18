@@ -88,8 +88,11 @@ typedef enum
 {
     VSCP_BOOTLOADER_MEM_TYPE_PROGRAM = 0,   /**< Program memory */
     VSCP_BOOTLOADER_MEM_TYPE_EEPROM,        /**< Data EEPROM memory */
-    VSCP_BOOTLOADER_MEM_TYPE_CONFIG,        /**< Configuation memory (fuses, etc.) */
-    VSCP_BOOTLOADER_MEM_TYPE_DATA           /**< Data memory (RAM) */
+    VSCP_BOOTLOADER_MEM_TYPE_CONFIG,        /**< Configuation memory (CPU configuration) */
+    VSCP_BOOTLOADER_MEM_TYPE_DATA,          /**< Data memory (RAM) */
+    VSCP_BOOTLOADER_MEM_TYPE_USERID_GUID,   /**< User id / GUID */
+    VSCP_BOOTLOADER_MEM_TYPE_FUSES,         /**< Fuses */
+    VSCP_BOOTLOADER_MEM_TYPE_BOOTLOADER     /**< Bootloader */
 
 } VSCP_BOOTLOADER_MEM_TYPE;
 
@@ -113,14 +116,15 @@ static void vscp_bootloader_sendNewNodeOnlineEvent(void);
 static void vscp_bootloader_sendAckEnterBootLoader(uint32_t blockSize, uint32_t numBlocks);
 static void vscp_bootloader_sendNakEnterBootLoader(uint8_t errorCode);
 static void vscp_bootloader_programmingProcedure(void);
-static void vscp_bootloader_handleProtocolStartBlockDataTransfer(vscp_RxMessage const * const rxMsg, vscp_bootloader_ProgParam * const progParam);
+static void vscp_bootloader_handleProtocolStartBlock(vscp_RxMessage const * const rxMsg, vscp_bootloader_ProgParam * const progParam);
 static void vscp_bootloader_handleProtocolBlockData(vscp_RxMessage const * const rxMsg, vscp_bootloader_ProgParam * const progParam);
 static void vscp_bootloader_handleProtocolProgramDataBlock(vscp_RxMessage const * const rxMsg, vscp_bootloader_ProgParam * const progParam);
 static BOOL vscp_bootloader_handleProtocolDropNicknameId(vscp_RxMessage const * const rxMsg);
-static void vscp_bootloader_sendAckStartBlockDataTransfer(void);
-static void vscp_bootloader_sendNakStartBlockDataTransfer(void);
-static void vscp_bootloader_sendAckBlockData(uint16_t crc, uint32_t writePtr);
-static void vscp_bootloader_sendNakBlockData(uint8_t errorCode, uint32_t writePtr);
+static void vscp_bootloader_handleProtocolBootLoaderCheck(vscp_RxMessage const * const rxMsg);
+static void vscp_bootloader_sendAckStartBlock(void);
+static void vscp_bootloader_sendNakStartBlock(void);
+static void vscp_bootloader_sendAckBlockChunkData(uint16_t crc, uint32_t writePtr);
+static void vscp_bootloader_sendNakBlockChunkData(uint8_t errorCode, uint32_t writePtr);
 static void vscp_bootloader_sendAckProgramBlockData(uint32_t blockNumber);
 static void vscp_bootloader_sendNakProgramBlockData(uint8_t errorCode, uint32_t blockNumber);
 static void vscp_bootloader_sendAckActivateNewImage(void);
@@ -390,7 +394,7 @@ static void vscp_bootloader_programmingProcedure(void)
                 switch(rxMsg.vscpType)
                 {
                 case VSCP_TYPE_PROTOCOL_START_BLOCK:
-                    vscp_bootloader_handleProtocolStartBlockDataTransfer(&rxMsg, &progParam);
+                    vscp_bootloader_handleProtocolStartBlock(&rxMsg, &progParam);
                     break;
 
                 case VSCP_TYPE_PROTOCOL_BLOCK_DATA:
@@ -409,6 +413,10 @@ static void vscp_bootloader_programmingProcedure(void)
                     abortFlag = vscp_bootloader_handleProtocolDropNicknameId(&rxMsg);
                     break;
 
+                case VSCP_TYPE_PROTOCOL_BOOT_LOADER_CHECK:
+                    vscp_bootloader_handleProtocolBootLoaderCheck(&rxMsg);
+                    break;
+
                 default:
                     break;
                 }
@@ -421,12 +429,12 @@ static void vscp_bootloader_programmingProcedure(void)
 }
 
 /**
- * This function handles the start block data transfer event.
+ * This function handles the start block event.
  *
  * @param[in]   rxMsg       Received message
  * @param[in]   progParam   Programming parameter
  */
-static void vscp_bootloader_handleProtocolStartBlockDataTransfer(vscp_RxMessage const * const rxMsg, vscp_bootloader_ProgParam * const progParam)
+static void vscp_bootloader_handleProtocolStartBlock(vscp_RxMessage const * const rxMsg, vscp_bootloader_ProgParam * const progParam)
 {
     if ((NULL == rxMsg) ||
         (NULL == progParam))
@@ -437,7 +445,7 @@ static void vscp_bootloader_handleProtocolStartBlockDataTransfer(vscp_RxMessage 
     if ((4 > rxMsg->dataSize) ||
         (6 < rxMsg->dataSize))
     {
-        vscp_bootloader_sendNakStartBlockDataTransfer();
+        vscp_bootloader_sendNakStartBlock();
     }
     else
     {
@@ -460,20 +468,20 @@ static void vscp_bootloader_handleProtocolStartBlockDataTransfer(vscp_RxMessage 
         }
 
         /* Validate parameters:
-            * - Only program flash is supported.
-            * - Received block number shall be valid.
-            */
+         * - Only program flash is supported.
+         * - Received block number shall be valid.
+         */
         if (VSCP_BOOTLOADER_MEM_TYPE_PROGRAM != memoryType)
         {
-            vscp_bootloader_sendNakStartBlockDataTransfer();
+            vscp_bootloader_sendNakStartBlock();
         }
         else if (VSCP_PLATFORM_PROG_MEM_NUM_BLOCKS <= progParam->blockNumber)
         {
-            vscp_bootloader_sendNakStartBlockDataTransfer();
+            vscp_bootloader_sendNakStartBlock();
         }
         else
         {
-            vscp_bootloader_sendAckStartBlockDataTransfer();
+            vscp_bootloader_sendAckStartBlock();
 
             /* Reset block buffer index */
             progParam->blockBufferIndex = 0;
@@ -500,14 +508,14 @@ static void vscp_bootloader_handleProtocolBlockData(vscp_RxMessage const * const
     /* Every block data must be a multiple of 8. */
     if (VSCP_L1_DATA_SIZE != rxMsg->dataSize)
     {
-        vscp_bootloader_sendNakBlockData(VSCP_BOOTLOADER_ERROR_INVALID_MESSAGE,
-                                         progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
+        vscp_bootloader_sendNakBlockChunkData(VSCP_BOOTLOADER_ERROR_INVALID_MESSAGE,
+                                              progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
     }
     /* Block buffer already full? */
     else if (VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE < (progParam->blockBufferIndex + rxMsg->dataSize))
     {
-        vscp_bootloader_sendNakBlockData(VSCP_BOOTLOADER_ERROR_INVALID_MESSAGE,
-                                         progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
+        vscp_bootloader_sendNakBlockChunkData(VSCP_BOOTLOADER_ERROR_INVALID_MESSAGE,
+                                              progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
     }
     else
     {
@@ -526,7 +534,7 @@ static void vscp_bootloader_handleProtocolBlockData(vscp_RxMessage const * const
             /* Calculate CRC16-CCITT over the whole block and send it back for verification. */
             Crc16CCITT  crcCalculated = crc16ccitt_calculate(progParam->blockBuffer, VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
 
-            vscp_bootloader_sendAckBlockData(crcCalculated, progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
+            vscp_bootloader_sendAckBlockChunkData(crcCalculated, progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
         }
     }
 
@@ -613,9 +621,24 @@ static BOOL vscp_bootloader_handleProtocolDropNicknameId(vscp_RxMessage const * 
 }
 
 /**
- * This function sends a "ACK start block data transfer" event.
+ * This function handles the boot loader check event.
+ *
+ * @param[in]   rxMsg   Received message
  */
-static void vscp_bootloader_sendAckStartBlockDataTransfer(void)
+static void vscp_bootloader_handleProtocolBootLoaderCheck(vscp_RxMessage const * const rxMsg)
+{
+    if (NULL == rxMsg)
+    {
+        return FALSE;
+    }
+
+    vscp_bootloader_sendAckEnterBootLoader(VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE, VSCP_PLATFORM_PROG_MEM_NUM_BLOCKS);
+}
+
+/**
+ * This function sends a "ACK start block" event.
+ */
+static void vscp_bootloader_sendAckStartBlock(void)
 {
     vscp_TxMessage  txMsg;
 
@@ -632,9 +655,9 @@ static void vscp_bootloader_sendAckStartBlockDataTransfer(void)
 }
 
 /**
- * This function sends a "NACK start block data transfer" event.
+ * This function sends a "NACK start block" event.
  */
-static void vscp_bootloader_sendNakStartBlockDataTransfer(void)
+static void vscp_bootloader_sendNakStartBlock(void)
 {
     vscp_TxMessage  txMsg;
 
@@ -651,17 +674,17 @@ static void vscp_bootloader_sendNakStartBlockDataTransfer(void)
 }
 
 /**
- * This function sends a "ACK block data" event.
+ * This function sends a "ACK block chunk data" event.
  *
  * @param[in]   crc         Block CRC
  * @param[in]   writePtr    Write pointer after the last data has been written
  */
-static void vscp_bootloader_sendAckBlockData(uint16_t crc, uint32_t writePtr)
+static void vscp_bootloader_sendAckBlockChunkData(uint16_t crc, uint32_t writePtr)
 {
     vscp_TxMessage  txMsg;
 
     txMsg.vscpClass = VSCP_CLASS_L1_PROTOCOL;
-    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_DATA_ACK;
+    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_DATA_CHUNK_ACK;
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
@@ -679,17 +702,17 @@ static void vscp_bootloader_sendAckBlockData(uint16_t crc, uint32_t writePtr)
 }
 
 /**
- * This function sends a "NACK block data" event.
+ * This function sends a "NACK block chunk data" event.
  *
  * @param[in]   errorCode   User defined error code
  * @param[in]   writePtr    Write pointer after the last data has been written
  */
-static void vscp_bootloader_sendNakBlockData(uint8_t errorCode, uint32_t writePtr)
+static void vscp_bootloader_sendNakBlockChunkData(uint8_t errorCode, uint32_t writePtr)
 {
     vscp_TxMessage  txMsg;
 
     txMsg.vscpClass = VSCP_CLASS_L1_PROTOCOL;
-    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_DATA_NACK;
+    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_DATA_CHUNK_NACK;
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
