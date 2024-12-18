@@ -156,8 +156,6 @@ extern void vscp_bootloader_init(void)
 {
     vscp_bl_adapter_init();
     vscp_tp_adapter_init();
-
-    return;
 }
 
 /**
@@ -224,8 +222,6 @@ extern void vscp_bootloader_run(void)
 
     vscp_bl_adapter_reboot();
     /* This line never will be reached. */
-
-    return;
 }
 
 /*******************************************************************************
@@ -300,8 +296,6 @@ static void vscp_bootloader_simApp(void)
         }
     }
     while(FALSE == success);
-
-    return;
 }
 
 /**
@@ -348,8 +342,6 @@ static void vscp_bootloader_sendAckEnterBootLoader(uint32_t blockSize, uint32_t 
     txMsg.data[7]   = (numBlocks >>  0) & 0xff; /* LSB of number of blocks available. */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
@@ -370,8 +362,6 @@ static void vscp_bootloader_sendNakEnterBootLoader(uint8_t errorCode)
     txMsg.data[0]   = errorCode;    /* User defined error code */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
@@ -424,8 +414,6 @@ static void vscp_bootloader_programmingProcedure(void)
         }
     }
     while(FALSE == abortFlag);
-
-    return;
 }
 
 /**
@@ -487,8 +475,6 @@ static void vscp_bootloader_handleProtocolStartBlock(vscp_RxMessage const * cons
             progParam->blockBufferIndex = 0;
         }
     }
-
-    return;
 }
 
 /**
@@ -537,8 +523,6 @@ static void vscp_bootloader_handleProtocolBlockData(vscp_RxMessage const * const
             vscp_bootloader_sendAckBlockChunkData(crcCalculated, progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
         }
     }
-
-    return;
 }
 
 /**
@@ -588,8 +572,6 @@ static void vscp_bootloader_handleProtocolProgramDataBlock(vscp_RxMessage const 
             vscp_bootloader_sendAckProgramBlockData(progParam->blockNumber);
         }
     }
-
-    return;
 }
 
 /**
@@ -629,7 +611,7 @@ static void vscp_bootloader_handleProtocolBootLoaderCheck(vscp_RxMessage const *
 {
     if (NULL == rxMsg)
     {
-        return FALSE;
+        return;
     }
 
     vscp_bootloader_sendAckEnterBootLoader(VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE, VSCP_PLATFORM_PROG_MEM_NUM_BLOCKS);
@@ -650,8 +632,6 @@ static void vscp_bootloader_sendAckStartBlock(void)
     txMsg.dataSize  = 0;    /* 0 byte data */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
@@ -669,8 +649,6 @@ static void vscp_bootloader_sendNakStartBlock(void)
     txMsg.dataSize  = 0;    /* 0 byte data */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
@@ -697,8 +675,6 @@ static void vscp_bootloader_sendAckBlockChunkData(uint16_t crc, uint32_t writePt
     txMsg.data[5]   = (uint8_t)((writePtr >>  0u) & 0xFFu);
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
@@ -724,8 +700,6 @@ static void vscp_bootloader_sendNakBlockChunkData(uint8_t errorCode, uint32_t wr
     txMsg.data[4]   = (uint8_t)((writePtr >>  0u) & 0xFFu);
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
@@ -749,8 +723,6 @@ static void vscp_bootloader_sendAckProgramBlockData(uint32_t blockNumber)
     txMsg.data[3]   = (uint8_t)((blockNumber >>  0u) & 0xFFu);
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
@@ -776,8 +748,6 @@ static void vscp_bootloader_sendNakProgramBlockData(uint8_t errorCode, uint32_t 
     txMsg.data[4]   = (uint8_t)((blockNumber >>  0u) & 0xFFu);
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
@@ -795,8 +765,6 @@ static void vscp_bootloader_sendAckActivateNewImage(void)
     txMsg.dataSize  = 0;    /* 0 byte data */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
@@ -814,8 +782,6 @@ static void vscp_bootloader_sendNakActivateNewImage(void)
     txMsg.dataSize  = 0;    /* 0 byte data */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
-
-    return;
 }
 
 /**
