@@ -662,7 +662,7 @@ static void vscp_bootloader_sendAckBlockChunkData(uint16_t crc, uint32_t writePt
     vscp_TxMessage  txMsg;
 
     txMsg.vscpClass = VSCP_CLASS_L1_PROTOCOL;
-    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_DATA_CHUNK_ACK;
+    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_ACK;
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
@@ -688,7 +688,7 @@ static void vscp_bootloader_sendNakBlockChunkData(uint8_t errorCode, uint32_t wr
     vscp_TxMessage  txMsg;
 
     txMsg.vscpClass = VSCP_CLASS_L1_PROTOCOL;
-    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_DATA_CHUNK_NACK;
+    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_NACK;
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
