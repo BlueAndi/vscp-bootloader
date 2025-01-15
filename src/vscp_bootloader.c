@@ -113,8 +113,8 @@ typedef struct
 
 static void vscp_bootloader_simApp(void);
 static void vscp_bootloader_sendNewNodeOnlineEvent(void);
-static void vscp_bootloader_sendAckEnterBootLoader(uint32_t blockSize, uint32_t numBlocks);
-static void vscp_bootloader_sendNakEnterBootLoader(uint8_t errorCode);
+static void vscp_bootloader_sendAckBootLoader(uint32_t blockSize, uint32_t numBlocks);
+static void vscp_bootloader_sendNakBootLoader(uint8_t errorCode);
 static void vscp_bootloader_programmingProcedure(void);
 static void vscp_bootloader_handleProtocolStartBlock(vscp_RxMessage const * const rxMsg, vscp_bootloader_ProgParam * const progParam);
 static void vscp_bootloader_handleProtocolBlockData(vscp_RxMessage const * const rxMsg, vscp_bootloader_ProgParam * const progParam);
@@ -213,7 +213,7 @@ extern void vscp_bootloader_run(void)
     }
 
     /* Acknowledge the "enter bootloader event", which was received by the application. */
-    vscp_bootloader_sendAckEnterBootLoader(VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE, VSCP_PLATFORM_PROG_MEM_NUM_BLOCKS);
+    vscp_bootloader_sendAckBootLoader(VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE, VSCP_PLATFORM_PROG_MEM_NUM_BLOCKS);
 
     /* Programming procedure */
     vscp_bootloader_programmingProcedure();
@@ -284,7 +284,7 @@ static void vscp_bootloader_simApp(void)
                         else
                         /* Bootloader programming algorithm not supported */
                         {
-                            vscp_bootloader_sendNakEnterBootLoader(VSCP_BOOTLOADER_ERROR_PROGRAMMING_ALGO_NOT_SUPPORTED);
+                            vscp_bootloader_sendNakBootLoader(VSCP_BOOTLOADER_ERROR_PROGRAMMING_ALGO_NOT_SUPPORTED);
                         }
                     }
                     break;
@@ -318,12 +318,12 @@ static void vscp_bootloader_sendNewNodeOnlineEvent(void)
 }
 
 /**
- * This function sends a "ACK enter bootloader" event.
+ * This function sends a "ACK bootloader" event.
  *
  * @param[in]   blockSize   Block size
  * @param[in]   numBlocks   Number of blocks
  */
-static void vscp_bootloader_sendAckEnterBootLoader(uint32_t blockSize, uint32_t numBlocks)
+static void vscp_bootloader_sendAckBootLoader(uint32_t blockSize, uint32_t numBlocks)
 {
     vscp_TxMessage  txMsg;
 
@@ -346,11 +346,11 @@ static void vscp_bootloader_sendAckEnterBootLoader(uint32_t blockSize, uint32_t 
 }
 
 /**
- * This function sends a "NACK enter bootloader" event.
+ * This function sends a "NACK bootloader" event.
  *
  * @param[in]  errorCode   User defined error code
  */
-static void vscp_bootloader_sendNakEnterBootLoader(uint8_t errorCode)
+static void vscp_bootloader_sendNakBootLoader(uint8_t errorCode)
 {
     vscp_TxMessage  txMsg;
 
@@ -615,7 +615,7 @@ static void vscp_bootloader_handleProtocolBootLoaderCheck(vscp_RxMessage const *
         return;
     }
 
-    vscp_bootloader_sendAckEnterBootLoader(VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE, VSCP_PLATFORM_PROG_MEM_NUM_BLOCKS);
+    vscp_bootloader_sendAckBootLoader(VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE, VSCP_PLATFORM_PROG_MEM_NUM_BLOCKS);
 }
 
 /**
