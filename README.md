@@ -81,7 +81,8 @@ description contains more details about how it proceeds.
     is correct acknowledge it via "ACK start block data transfer" event otherwise via
     "NACK start block data transfer" event.
 
-11. Now several "block data" events will be received, until the complete block is transfered.
+11. Now several "block data" events will be received and acknowledged with "ACK block chunk" events,
+    until the complete block is transfered.
     Every received block data shall be written to RAM buffer. After the last data is transfered,
     a CRC16-CCITT shall be calculated over the whole block. And an "ACK block data" event shall
     be sent with the calculated CRC as parameter.
@@ -151,7 +152,7 @@ Note that the vscp\_bootloader\_run() will never return!
 ## How can a application be programmed via bootloader?
 
 * For the command line interface: [VSCP L1 programmer](https://github.com/BlueAndi/vscp-cli-tools).
-* With a graphical user interface: [vscpworks](https://github.com/grodansparadis/vscpworks).
+* With a graphical user interface: [vscp-works-qt](https://github.com/grodansparadis/vscp-works-qt).
 
 ## Why does the node sends a new node online event with 0xFE?
 
