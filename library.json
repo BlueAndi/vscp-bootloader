@@ -1,6 +1,6 @@
 {
     "name": "vscp-bootloader",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "description": "A generic VSCP (Very Simple Control Protocol) level 1 bootloader, which supports the standard bootloader algorithm. It provides the possibility to program a new firmware image to a VSCP node.",
     "keywords": "vscp, vscp-framework, vscp-bootloader, automation, home automation",
     "repository": {
