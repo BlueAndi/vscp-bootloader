@@ -123,8 +123,10 @@ static BOOL vscp_bootloader_handleProtocolDropNicknameId(vscp_RxMessage const * 
 static void vscp_bootloader_handleProtocolBootLoaderCheck(vscp_RxMessage const * const rxMsg);
 static void vscp_bootloader_sendAckStartBlock(void);
 static void vscp_bootloader_sendNakStartBlock(void);
-static void vscp_bootloader_sendAckBlockChunkData(uint16_t crc, uint32_t writePtr);
-static void vscp_bootloader_sendNakBlockChunkData(uint8_t errorCode, uint32_t writePtr);
+static void vscp_bootloader_sendAckBlockData(uint16_t crc, uint32_t writePtr);
+static void vscp_bootloader_sendNakBlockData(uint8_t errorCode, uint32_t writePtr);
+static void vscp_bootloader_sendAckBlockChunkData(void);
+static void vscp_bootloader_sendNakBlockChunkData(void);
 static void vscp_bootloader_sendAckProgramBlockData(uint32_t blockNumber);
 static void vscp_bootloader_sendNakProgramBlockData(uint8_t errorCode, uint32_t blockNumber);
 static void vscp_bootloader_sendAckActivateNewImage(void);
@@ -494,14 +496,12 @@ static void vscp_bootloader_handleProtocolBlockData(vscp_RxMessage const * const
     /* Every block data must be a multiple of 8. */
     if (VSCP_L1_DATA_SIZE != rxMsg->dataSize)
     {
-        vscp_bootloader_sendNakBlockChunkData(VSCP_BOOTLOADER_ERROR_INVALID_MESSAGE,
-                                              progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
+        vscp_bootloader_sendNakBlockChunkData();
     }
     /* Block buffer already full? */
     else if (VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE < (progParam->blockBufferIndex + rxMsg->dataSize))
     {
-        vscp_bootloader_sendNakBlockChunkData(VSCP_BOOTLOADER_ERROR_INVALID_MESSAGE,
-                                              progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
+        vscp_bootloader_sendNakBlockChunkData();
     }
     else
     {
@@ -514,13 +514,18 @@ static void vscp_bootloader_handleProtocolBlockData(vscp_RxMessage const * const
             ++(progParam->blockBufferIndex);
         }
 
-        /* Complete block received? */
-        if (VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE <= progParam->blockBufferIndex)
+        /* Not complete block received? */
+        if (VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE > progParam->blockBufferIndex)
+        {
+            vscp_bootloader_sendAckBlockChunkData();
+        }
+        /* Complete block received. */
+        else
         {
             /* Calculate CRC16-CCITT over the whole block and send it back for verification. */
             Crc16CCITT  crcCalculated = crc16ccitt_calculate(progParam->blockBuffer, VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
 
-            vscp_bootloader_sendAckBlockChunkData(crcCalculated, progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
+            vscp_bootloader_sendAckBlockData(crcCalculated, progParam->blockNumber * VSCP_PLATFORM_PROG_MEM_BLOCK_SIZE);
         }
     }
 }
@@ -652,17 +657,17 @@ static void vscp_bootloader_sendNakStartBlock(void)
 }
 
 /**
- * This function sends a "ACK block chunk data" event.
+ * This function sends a "ACK block data" event.
  *
  * @param[in]   crc         Block CRC
  * @param[in]   writePtr    Write pointer after the last data has been written
  */
-static void vscp_bootloader_sendAckBlockChunkData(uint16_t crc, uint32_t writePtr)
+static void vscp_bootloader_sendAckBlockData(uint16_t crc, uint32_t writePtr)
 {
     vscp_TxMessage  txMsg;
 
     txMsg.vscpClass = VSCP_CLASS_L1_PROTOCOL;
-    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_ACK;
+    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_ACK;
     txMsg.priority  = VSCP_PRIORITY_7_LOW;
     txMsg.oAddr     = vscp_bootloader_nickname;
     txMsg.hardCoded = FALSE;
@@ -678,12 +683,12 @@ static void vscp_bootloader_sendAckBlockChunkData(uint16_t crc, uint32_t writePt
 }
 
 /**
- * This function sends a "NACK block chunk data" event.
+ * This function sends a "NACK block data" event.
  *
  * @param[in]   errorCode   User defined error code
  * @param[in]   writePtr    Write pointer after the last data has been written
  */
-static void vscp_bootloader_sendNakBlockChunkData(uint8_t errorCode, uint32_t writePtr)
+static void vscp_bootloader_sendNakBlockData(uint8_t errorCode, uint32_t writePtr)
 {
     vscp_TxMessage  txMsg;
 
@@ -698,6 +703,40 @@ static void vscp_bootloader_sendNakBlockChunkData(uint8_t errorCode, uint32_t wr
     txMsg.data[2]   = (uint8_t)((writePtr >> 16u) & 0xFFu);
     txMsg.data[3]   = (uint8_t)((writePtr >>  8u) & 0xFFu);
     txMsg.data[4]   = (uint8_t)((writePtr >>  0u) & 0xFFu);
+
+    (void)vscp_tp_adapter_writeMessage(&txMsg);
+}
+
+/**
+ * This function sends a "ACK block chunk data" event.
+ */
+static void vscp_bootloader_sendAckBlockChunkData(void)
+{
+    vscp_TxMessage  txMsg;
+
+    txMsg.vscpClass = VSCP_CLASS_L1_PROTOCOL;
+    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_ACK;
+    txMsg.priority  = VSCP_PRIORITY_7_LOW;
+    txMsg.oAddr     = vscp_bootloader_nickname;
+    txMsg.hardCoded = FALSE;
+    txMsg.dataSize  = 0;    /* 0 byte data */
+
+    (void)vscp_tp_adapter_writeMessage(&txMsg);
+}
+
+/**
+ * This function sends a "NACK block chunk data" event.
+ */
+static void vscp_bootloader_sendNakBlockChunkData(void)
+{
+    vscp_TxMessage  txMsg;
+
+    txMsg.vscpClass = VSCP_CLASS_L1_PROTOCOL;
+    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_CHUNK_NACK;
+    txMsg.priority  = VSCP_PRIORITY_7_LOW;
+    txMsg.oAddr     = vscp_bootloader_nickname;
+    txMsg.hardCoded = FALSE;
+    txMsg.dataSize  = 0;    /* 0 byte data */
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
 }
