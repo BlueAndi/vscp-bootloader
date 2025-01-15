@@ -124,7 +124,6 @@ static void vscp_bootloader_handleProtocolBootLoaderCheck(vscp_RxMessage const *
 static void vscp_bootloader_sendAckStartBlock(void);
 static void vscp_bootloader_sendNakStartBlock(void);
 static void vscp_bootloader_sendAckBlockData(uint16_t crc, uint32_t writePtr);
-static void vscp_bootloader_sendNakBlockData(uint8_t errorCode, uint32_t writePtr);
 static void vscp_bootloader_sendAckBlockChunk(void);
 static void vscp_bootloader_sendNakBlockChunk(void);
 static void vscp_bootloader_sendAckProgramBlockData(uint32_t blockNumber);
@@ -675,31 +674,6 @@ static void vscp_bootloader_sendAckBlockData(uint16_t crc, uint32_t writePtr)
     txMsg.data[3]   = (uint8_t)((writePtr >> 16u) & 0xFFu);
     txMsg.data[4]   = (uint8_t)((writePtr >>  8u) & 0xFFu);
     txMsg.data[5]   = (uint8_t)((writePtr >>  0u) & 0xFFu);
-
-    (void)vscp_tp_adapter_writeMessage(&txMsg);
-}
-
-/**
- * This function sends a "NACK block data" event.
- *
- * @param[in]   errorCode   User defined error code
- * @param[in]   writePtr    Write pointer after the last data has been written
- */
-static void vscp_bootloader_sendNakBlockData(uint8_t errorCode, uint32_t writePtr)
-{
-    vscp_TxMessage  txMsg;
-
-    txMsg.vscpClass = VSCP_CLASS_L1_PROTOCOL;
-    txMsg.vscpType  = VSCP_TYPE_PROTOCOL_BLOCK_DATA_NACK;
-    txMsg.priority  = VSCP_PRIORITY_7_LOW;
-    txMsg.oAddr     = vscp_bootloader_nickname;
-    txMsg.hardCoded = FALSE;
-    txMsg.dataSize  = 5;    /* 5 byte data */
-    txMsg.data[0]   = errorCode;
-    txMsg.data[1]   = (uint8_t)((writePtr >> 24u) & 0xFFu);
-    txMsg.data[2]   = (uint8_t)((writePtr >> 16u) & 0xFFu);
-    txMsg.data[3]   = (uint8_t)((writePtr >>  8u) & 0xFFu);
-    txMsg.data[4]   = (uint8_t)((writePtr >>  0u) & 0xFFu);
 
     (void)vscp_tp_adapter_writeMessage(&txMsg);
 }
