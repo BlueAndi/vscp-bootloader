@@ -1,0 +1,90 @@
+@startuml vscp_std_bootloader_algorithm_detail
+
+title "Firmware Update Procedure"
+
+participant Master as master
+participant Node as node
+
+autoactivate on
+
+-> master
+
+master ->> node: Enter boot loader mode\n(algorithm)
+master <<-- node: Boot loader acknowledge\n(block size and max. number of blocks)
+
+loop #lightblue Until all blocks are programmed
+
+    loop #white Until a single block is received successful
+
+        master ->> node: Start block data\n(block number)
+        master <<-- node: Start block data acknowledge
+        
+        loop #lightblue Until a single block is complete
+
+            alt #white Bootloader doesn't support block chunk acknowledge
+                
+                master ->> node: Block chunk data\n(data = part of a single block)
+                deactivate node
+                master -> master: Wait 1s for block chunk acknowledge
+                master <-- master
+
+            else Bootloader supports block chunk acknowledge
+
+                alt #lightgreen Block chunk acknowledge is received in time
+
+                    master ->> node: Block chunk data\n(data = part of a single block)
+                    master <<-- node: Block chunk acknowledge
+
+                else #orange Block chunk negative acknowledge is received in time
+
+                    loop Until a block chunk acknowledge is received or\n3 times block chunk negative acknowledge is received
+                        master ->> node: Block chunk data\n(data = part of a single block)
+                        master <<-- node: Block chunk negative acknowledge
+                    end
+
+                    note over master, node
+                        After 3 times a block chunk negative acknowledge was received,
+                        the master shall send a start block data command again.
+                    end note
+                end
+
+            end
+        end
+
+        alt Node received successful all chunks of one block
+
+            node <-
+                master <<- node: Block data acknowledge
+                deactivate master
+            node -->
+
+        else Received block data is not correct
+
+            node <-
+                master <<- node: Block data negative acknowledge
+                deactivate master
+            node -->
+
+        else Node missed a block chunk
+        
+            master -> master: Wait 1s for block data acknowledge
+            master <-- master
+
+            note over master, node
+                After 3 times a block data acknowledge was not received,
+                the master shall abort programming this area.
+            end note
+
+        end
+    end
+
+    master ->> node: Program block\n(Block number)
+    master <<-- node: Program block acknowledge\n(Block CRC)
+end
+
+master ->> node: Activate new image\n(Sum of all block CRCs, incl. wrap around)
+master <<-- node: Activate new image acknowledge
+
+<-- master
+
+@enduml

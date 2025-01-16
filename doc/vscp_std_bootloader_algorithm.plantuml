@@ -33,7 +33,7 @@ loop Until all blocks are programmed
     master <<-- node: Program block acknowledge\n(Block CRC)
 end loop
 
-master ->> node: Activate new image\n(CRC of all blocks)
+master ->> node: Activate new image\n(Sum of all block CRCs, incl. wrap around)
 master <<-- node: Activate new image acknowledge
 
 <-- master

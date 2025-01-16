@@ -84,7 +84,8 @@ This module provides a generic bootloader as specified by VSCP specification.
  *     is correct acknowledge it via "ACK start block data transfer" event otherwise via
  *     "NACK start block data transfer" event.
  *
- * 11. Now several "block data" events will be received, until the complete block is transfered.
+ * 11. Now several "block data" events will be received and acknowledged with "ACK block chunk" events,
+ *     until the complete block is transfered.
  *     Every received block data shall be written to RAM buffer. After the last data is transfered,
  *     a CRC16-CCITT shall be calculated over the whole block. And an "ACK block data" event shall
  *     be sent with the calculated CRC as parameter.

@@ -6,18 +6,18 @@
 
 A generic VSCP L1 bootloader, which supports the [standard bootloader algorithm](#vscp-standard-boot-loader-algorithm). It provides the possibility to program a new firmware image to a VSCP node.
 
-- [VSCP L1 Bootloader](#vscp-l1-bootloader)
-- [VSCP](#vscp)
-- [VSCP Standard Bootloader Algorithm](#vscp-standard-bootloader-algorithm)
-  - [Description](#description)
-  - [Facts](#facts)
-- [FAQ](#faq)
-  - [How to integrate it?](#how-to-integrate-it)
-  - [How can a application be programmed via bootloader?](#how-can-a-application-be-programmed-via-bootloader)
-  - [Why does the node sends a new node online event with 0xFE?](#why-does-the-node-sends-a-new-node-online-event-with-0xfe)
-- [Issues, Ideas And Bugs](#issues-ideas-and-bugs)
-- [License](#license)
-- [Contribution](#contribution)
+* [VSCP L1 Bootloader](#vscp-l1-bootloader)
+* [VSCP](#vscp)
+* [VSCP Standard Bootloader Algorithm](#vscp-standard-bootloader-algorithm)
+  * [Description](#description)
+  * [Facts](#facts)
+* [FAQ](#faq)
+  * [How to integrate it?](#how-to-integrate-it)
+  * [How can a application be programmed via bootloader?](#how-can-a-application-be-programmed-via-bootloader)
+  * [Why does the node sends a new node online event with 0xFE?](#why-does-the-node-sends-a-new-node-online-event-with-0xfe)
+* [Issues, Ideas And Bugs](#issues-ideas-and-bugs)
+* [License](#license)
+* [Contribution](#contribution)
 
 # VSCP
 
@@ -30,6 +30,8 @@ More information can be found on the main site http://www.vscp.org
 # VSCP Standard Bootloader Algorithm
 
 ![VSCP standard bootloader algorithm](https://github.com/BlueAndi/vscp-bootloader/blob/master/doc/vscp_std_bootloader_algorithm.png)
+
+[More detail](https://github.com/BlueAndi/vscp-bootloader/blob/master/doc/vscp_std_bootloader_algorithm_detal.png)
 
 ## Description
 
