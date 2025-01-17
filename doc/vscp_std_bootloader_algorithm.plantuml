@@ -1,27 +1,41 @@
-@startuml
+@startuml vscp_std_bootloader_algorithm
 
 title "Firmware Update Procedure"
 
 participant Master as master
 participant Node as node
 
+autoactivate on
+
+-> master
+
 master ->> node: Enter boot loader mode\n(algorithm)
-node ->> master: Enter boot loader mode acknowledge\n(block size and max. number of blocks)
+master <<-- node: Enter boot loader mode acknowledge\n(block size and max. number of blocks)
 
 loop Until all blocks are programmed
-    master ->> node: Start block data transfer\n(block number)
-    node ->> master: Start block data transfer acknowledge
+    master ->> node: Start block data\n(block number)
+    master <<-- node: Start block data acknowledge
     
     loop Until a single block is complete
         master ->> node: Block data\n(data = part of a single block)
+        master <<-- node: Block chunk acknowledge
     end
     
-    node ->> master: Block data acknowledge
+    note over master
+        Wait for block data acknowledge
+    end note
+
+    node <-
+    master <<- node: Block data acknowledge
+    deactivate master
+    node -->
     master ->> node: Program block\n(Block number)
-    node ->> master: Program block acknowledge\n(Block CRC)
+    master <<-- node: Program block acknowledge\n(Block CRC)
 end loop
 
-master ->> node: Activate new image\n(CRC of all blocks)
-node ->> master: Activate new image acknowledge
+master ->> node: Activate new image\n(Sum of all block CRCs, incl. wrap around)
+master <<-- node: Activate new image acknowledge
+
+<-- master
 
 @enduml
