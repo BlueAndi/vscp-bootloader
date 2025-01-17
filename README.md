@@ -31,7 +31,7 @@ More information can be found on the main site http://www.vscp.org
 
 ![VSCP standard bootloader algorithm](https://github.com/BlueAndi/vscp-bootloader/blob/master/doc/vscp_std_bootloader_algorithm.png)
 
-[More detail](https://github.com/BlueAndi/vscp-bootloader/blob/master/doc/vscp_std_bootloader_algorithm_detal.png)
+[More detail](https://github.com/BlueAndi/vscp-bootloader/blob/master/doc/vscp_std_bootloader_algorithm_detail.png)
 
 ## Description
 
